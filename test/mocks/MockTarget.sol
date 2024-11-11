@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import {console2} from "forge-std/Test.sol";
+
 contract MockTarget {
     error TargetError(bytes data);
 
@@ -9,6 +11,10 @@ contract MockTarget {
     bytes public data;
 
     function setData(bytes memory data_) public payable returns (bytes memory) {
+        console2.log("setData start");
+        console2.log("msg.sender", msg.sender);
+        console2.log("address(this)", address(this));
+
         data = data_;
         datahash = keccak256(data_);
         return data_;
