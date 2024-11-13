@@ -2,6 +2,7 @@
 pragma solidity ^0.8.4;
 
 import {DueMultisigWallet} from "./DueMultisigWallet.sol";
+import {Credential} from "./DueSmartWalletLib.sol";
 import {LibClone} from "solady/utils/LibClone.sol";
 
 /// @title Coinbase Smart Wallet Factory
@@ -22,7 +23,7 @@ contract DueWalletFactory {
         implementation = implementation_;
     }
 
-    function createAccount(bytes[] calldata credentials, uint256 nonce)
+    function createAccount(Credential[] calldata credentials, uint256 nonce)
         external
         payable
         virtual
@@ -38,7 +39,7 @@ contract DueWalletFactory {
         }
     }
 
-    function getAddress(bytes[] calldata credentials, uint256 nonce) external view returns (address) {
+    function getAddress(Credential[] calldata credentials, uint256 nonce) external view returns (address) {
         return LibClone.predictDeterministicAddress(initCodeHash(), _getSalt(credentials, nonce), address(this));
     }
 
@@ -56,7 +57,7 @@ contract DueWalletFactory {
     /// @param nonce  The nonce provided to `createAccount()`.
     ///
     /// @return The computed salt.
-    function _getSalt(bytes[] calldata credentials, uint256 nonce) internal pure returns (bytes32) {
+    function _getSalt(Credential[] calldata credentials, uint256 nonce) internal pure returns (bytes32) {
         return keccak256(abi.encode(credentials, nonce));
     }
 }

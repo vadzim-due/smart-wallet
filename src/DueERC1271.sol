@@ -72,7 +72,7 @@ abstract contract ERC1271 {
     ///
     /// @return result `0x1626ba7e` if validation succeeded, else `0xffffffff`.
     function isValidSignature(bytes32 hash, bytes calldata signature) public view virtual returns (bytes4 result) {
-        if (_isValidSignature({hash: hash, signature: signature})) {
+        if (_isValidSignature({hash: replaySafeHash(_hashStruct(hash)), signature: signature})) {
             return ERC1271_VALID_SIGNATURE;
         }
 
@@ -124,7 +124,7 @@ abstract contract ERC1271 {
     ////
     /// @return The resulting EIP-712 hash.
     function _eip712Hash(bytes32 hash) internal view virtual returns (bytes32) {
-        return keccak256(abi.encodePacked("\x19\x01", domainSeparator(), _hashStruct(hash)));
+        return keccak256(abi.encodePacked("\x19\x01", domainSeparator(), hash));
     }
 
     /// @notice Returns the EIP-712 `hashStruct` result of the `CoinbaseSmartWalletMessage(bytes32 hash)` data

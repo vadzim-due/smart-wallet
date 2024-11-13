@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
+import {Credential} from "./DueSmartWalletLib.sol";
+
 struct MultisigStorage {
     uint256 signaturesThreshold;
     uint256 nextSignerIndex;
@@ -9,18 +11,18 @@ struct MultisigStorage {
     mapping(uint256 signerIndex => uint256 removedCredentialsCount) removedCredentialsCount;
     // index to check if credential is already by a signer
     mapping(bytes credential => bool isSigner_) isSigner;
-    mapping(uint256 signerIndex => mapping(uint256 credentialIndex => bytes credential)) signerCredentialAtIndex;
+    mapping(uint256 signerIndex => mapping(uint256 credentialIndex => Credential credential)) signerCredentialAtIndex;
     mapping(uint192 key => uint64 nonce) nonces;
 }
 
 contract Multisig {
     event SignerAdded(uint256 indexed index);
     event SignerRemoved(uint256 indexed index);
-    event CredentialAdded(uint256 indexed index, uint256 credentialIndex, bytes credential);
-    event CredentialRemoved(uint256 indexed index, uint256 credentialIndex, bytes credential);
+    event CredentialAdded(uint256 indexed index, uint256 credentialIndex, Credential credential);
+    event CredentialRemoved(uint256 indexed index, uint256 credentialIndex, Credential credential);
     event ThresholdChanged(uint256 oldThreshold, uint256 newThreshold);
 
-    error SignerAlreadyExists(bytes credential);
+    error CredentialAlreadyInUse(bytes credential);
     error SignerNotFound(uint256 index);
     error SignerCredentialNotFound(uint256 index, uint256 credentialIndex);
     error SignerCredentialMismatch(uint256 index, uint256 credentialIndex, bytes expected, bytes actual);
@@ -48,7 +50,7 @@ contract Multisig {
         public
         view
         virtual
-        returns (bytes memory)
+        returns (Credential memory)
     {
         return _getMultisigStorage().signerCredentialAtIndex[index][credentialIndex];
     }
@@ -67,7 +69,7 @@ contract Multisig {
         return $.nextCredentialIndex[index] - $.removedCredentialsCount[index];
     }
 
-    function _addSigner(bytes[] memory credentials, uint256 newThreshold) internal virtual {
+    function _addSigner(Credential[] memory credentials, uint256 newThreshold) internal virtual {
         MultisigStorage storage $ = _getMultisigStorage();
 
         uint256 index = $.nextSignerIndex++;
@@ -80,14 +82,14 @@ contract Multisig {
         _updateThreshold(newThreshold);
     }
 
-    function _addSignerCredential(uint256 index, bytes memory credential) internal virtual {
+    function _addSignerCredential(uint256 index, Credential memory credential) internal virtual {
         MultisigStorage storage $ = _getMultisigStorage();
 
         _validateCredential(credential);
-        if ($.isSigner[credential]) {
-            revert SignerAlreadyExists(credential);
+        if ($.isSigner[credential.payload]) {
+            revert CredentialAlreadyInUse(credential.payload);
         }
-        $.isSigner[credential] = true;
+        $.isSigner[credential.payload] = true;
 
         uint256 credentialIndex = $.nextCredentialIndex[index]++;
         $.signerCredentialAtIndex[index][credentialIndex] = credential;
@@ -95,16 +97,16 @@ contract Multisig {
         emit CredentialAdded(index, credentialIndex, credential);
     }
 
-    function _validateCredential(bytes memory credential) internal pure {
-        uint256 length = credential.length;
+    function _validateCredential(Credential memory credential) internal pure {
+        uint256 length = credential.payload.length;
         if (length != 32 && length != 64) {
-            revert InvalidCredentialLength(credential);
+            revert InvalidCredentialLength(credential.payload);
         }
 
         if (length == 32) {
-            bytes32 addr = bytes32(credential);
+            bytes32 addr = bytes32(credential.payload);
             if (uint256(addr) > type(uint160).max) {
-                revert InvalidEthereumAddress(credential);
+                revert InvalidEthereumAddress(credential.payload);
             }
         }
     }
@@ -159,8 +161,8 @@ contract Multisig {
 
         bool found = false;
         for (uint256 i = 0; i < signerCredentialsCount(index); i++) {
-            bytes memory credential = $.signerCredentialAtIndex[index][i];
-            if (credential.length == 0) {
+            Credential memory credential = $.signerCredentialAtIndex[index][i];
+            if (credential.payload.length == 0) {
                 continue;
             }
 
@@ -176,7 +178,7 @@ contract Multisig {
         emit SignerRemoved(index);
     }
 
-    function _removeSignerCredential(uint256 index, uint256 credentialIndex, bytes memory signerCredential)
+    function _removeSignerCredential(uint256 index, uint256 credentialIndex, Credential memory signerCredential)
         internal
         virtual
     {
@@ -186,21 +188,23 @@ contract Multisig {
         _removeSignerCredentialAtIndex(index, credentialIndex, signerCredential);
     }
 
-    function _removeSignerCredentialAtIndex(uint256 index, uint256 credentialIndex, bytes memory expectedCredential)
-        private
-    {
+    function _removeSignerCredentialAtIndex(
+        uint256 index,
+        uint256 credentialIndex,
+        Credential memory expectedCredential
+    ) private {
         MultisigStorage storage $ = _getMultisigStorage();
 
-        bytes memory credential = $.signerCredentialAtIndex[index][credentialIndex];
-        if (credential.length == 0) {
+        Credential memory credential = $.signerCredentialAtIndex[index][credentialIndex];
+        if (credential.payload.length == 0) {
             revert SignerCredentialNotFound(index, credentialIndex);
         }
 
-        if (keccak256(credential) != keccak256(expectedCredential)) {
-            revert SignerCredentialMismatch(index, credentialIndex, expectedCredential, credential);
+        if (keccak256(credential.payload) != keccak256(expectedCredential.payload)) {
+            revert SignerCredentialMismatch(index, credentialIndex, expectedCredential.payload, credential.payload);
         }
 
-        delete $.isSigner[credential];
+        delete $.isSigner[credential.payload];
         delete $.signerCredentialAtIndex[index][credentialIndex];
         $.removedCredentialsCount[index]++;
 
