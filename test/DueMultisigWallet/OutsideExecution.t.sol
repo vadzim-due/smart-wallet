@@ -17,7 +17,7 @@ contract TestOutsideExecution is DueSmartWalletTestBase {
         uint256 nonce = account.nextNonce(0);
         OutsideExecution memory oe = OutsideExecution(address(0x0), nonce, 0x0, 0x0, block.chainid, calls);
 
-        bytes32 toSign = account.replaySafeHash(DueSmartWalletLib.hash(oe));
+        bytes32 toSign = account.replaySafeHash(DueSmartWalletLib.hashOutsideExecution(oe));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, toSign);
         bytes memory signature = abi.encodePacked(r, s, v);
 

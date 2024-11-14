@@ -11,20 +11,20 @@ contract MultisigAddNewSignerTest is MockMultisigTestBase {
         assertEq(1, mock.nextSignerIndex());
 
         address signer2Address1 = address(0x001);
-        bytes[] memory signer2Credentials = new bytes[](1);
-        signer2Credentials[0] = abi.encode(signer2Address1);
+        Credential[] memory signer2Credentials = new Credential[](1);
+        signer2Credentials[0] = Credential(abi.encode(signer2Address1), CredentialType.EthereumAddress);
 
         mock.addSigner(signer2Credentials, 2);
         assertEq(2, mock.threshold());
         assertEq(2, mock.nextSignerIndex());
-        assertEq(signer2Credentials[0], mock.signerCredentialAtIndex(1, 0));
+        assertEq(signer2Credentials[0].payload, mock.signerCredentialAtIndex(1, 0).payload);
     }
 
     function testAddSignerRevertsIfCredentialAlreadyUsed() public {
-        bytes[] memory signer2Credentials = new bytes[](1);
-        signer2Credentials[0] = abi.encode(signer1Address);
+        Credential[] memory signer2Credentials = new Credential[](1);
+        signer2Credentials[0] = Credential(abi.encode(signer1Address), CredentialType.EthereumAddress);
 
-        vm.expectRevert(abi.encodeWithSelector(Multisig.SignerAlreadyExists.selector, abi.encode(signer1Address)));
+        vm.expectRevert(abi.encodeWithSelector(Multisig.CredentialAlreadyInUse.selector, abi.encode(signer1Address)));
         mock.addSigner(signer2Credentials, 2);
     }
 }

@@ -72,7 +72,7 @@ abstract contract ERC1271 {
     ///
     /// @return result `0x1626ba7e` if validation succeeded, else `0xffffffff`.
     function isValidSignature(bytes32 hash, bytes calldata signature) public view virtual returns (bytes4 result) {
-        if (_isValidSignature({hash: replaySafeHash(_hashStruct(hash)), signature: signature})) {
+        if (_isValidSignature({hash: replaySafeHash(hashStruct(hash)), signature: signature})) {
             return ERC1271_VALID_SIGNATURE;
         }
 
@@ -93,6 +93,19 @@ abstract contract ERC1271 {
     /// @return The corresponding replay-safe hash.
     function replaySafeHash(bytes32 hash) public view virtual returns (bytes32) {
         return _eip712Hash(hash);
+    }
+
+    /// @notice Returns the EIP-712 `hashStruct` result of the `CoinbaseSmartWalletMessage(bytes32 hash)` data
+    ///         structure.
+    ///
+    /// @dev Implements hashStruct(s : 𝕊) = keccak256(typeHash || encodeData(s)).
+    /// @dev See https://eips.ethereum.org/EIPS/eip-712#definition-of-hashstruct.
+    ///
+    /// @param hash The `CoinbaseSmartWalletMessage.hash` field.
+    ///
+    /// @return The EIP-712 `hashStruct` result.
+    function hashStruct(bytes32 hash) public view virtual returns (bytes32) {
+        return keccak256(abi.encode(_MESSAGE_TYPEHASH, hash));
     }
 
     /// @notice Returns the `domainSeparator` used to create EIP-712 compliant hashes.
@@ -125,19 +138,6 @@ abstract contract ERC1271 {
     /// @return The resulting EIP-712 hash.
     function _eip712Hash(bytes32 hash) internal view virtual returns (bytes32) {
         return keccak256(abi.encodePacked("\x19\x01", domainSeparator(), hash));
-    }
-
-    /// @notice Returns the EIP-712 `hashStruct` result of the `CoinbaseSmartWalletMessage(bytes32 hash)` data
-    ///         structure.
-    ///
-    /// @dev Implements hashStruct(s : 𝕊) = keccak256(typeHash || encodeData(s)).
-    /// @dev See https://eips.ethereum.org/EIPS/eip-712#definition-of-hashstruct.
-    ///
-    /// @param hash The `CoinbaseSmartWalletMessage.hash` field.
-    ///
-    /// @return The EIP-712 `hashStruct` result.
-    function _hashStruct(bytes32 hash) internal view virtual returns (bytes32) {
-        return keccak256(abi.encode(_MESSAGE_TYPEHASH, hash));
     }
 
     /// @notice Returns the domain name and version to use when creating EIP-712 signatures.

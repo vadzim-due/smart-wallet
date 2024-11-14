@@ -8,8 +8,8 @@ import "webauthn-sol/../test/Utils.sol";
 
 contract TestIsValidSignature is DueSmartWalletTestBase {
     function addNewPKSigner(uint256 pk, uint256 threshold) internal {
-        bytes[] memory credentials = new bytes[](1);
-        credentials[0] = abi.encode(vm.addr(pk));
+        Credential[] memory credentials = new Credential[](1);
+        credentials[0] = Credential(abi.encode(vm.addr(pk)), CredentialType.EthereumAddress);
 
         Call[] memory calls = new Call[](1);
         calls[0] = Call(
@@ -19,7 +19,7 @@ contract TestIsValidSignature is DueSmartWalletTestBase {
         uint256 nonce = account.nextNonce(account.REPLAYABLE_NONCE_KEY());
         OutsideExecution memory oe = OutsideExecution(address(0x0), nonce, 0x0, 0x0, 0x0, calls);
 
-        bytes32 toSign = account.replaySafeHash(DueSmartWalletLib.hash(oe));
+        bytes32 toSign = account.replaySafeHash(DueSmartWalletLib.hashOutsideExecution(oe));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, toSign);
         bytes memory signature = abi.encodePacked(r, s, v);
 
@@ -32,7 +32,7 @@ contract TestIsValidSignature is DueSmartWalletTestBase {
 
     function testValidateSignature1SignerEOA() public {
         bytes32 hash = 0x15fa6f8c855db1dccbb8a42eef3a7b83f11d29758e84aed37312527165d5eec5;
-        bytes32 toSign = account.replaySafeHash(hash);
+        bytes32 toSign = account.replaySafeHash(account.hashStruct(hash));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, toSign);
         bytes memory signature = abi.encodePacked(r, s, v);
 
@@ -48,7 +48,7 @@ contract TestIsValidSignature is DueSmartWalletTestBase {
         addNewPKSigner(signer2PrivateKey, 2);
 
         bytes32 hash = 0x15fa6f8c855db1dccbb8a42eef3a7b83f11d29758e84aed37312527165d5eec5;
-        bytes32 toSign = account.replaySafeHash(hash);
+        bytes32 toSign = account.replaySafeHash(account.hashStruct(hash));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, toSign);
         bytes memory signature = abi.encodePacked(r, s, v);
 
@@ -65,7 +65,7 @@ contract TestIsValidSignature is DueSmartWalletTestBase {
 
     function testValidateSignatureWith1SignerPasskey() public {
         bytes32 hash = 0x15fa6f8c855db1dccbb8a42eef3a7b83f11d29758e84aed37312527165d5eec5;
-        bytes32 challenge = account.replaySafeHash(hash);
+        bytes32 challenge = account.replaySafeHash(account.hashStruct(hash));
         WebAuthnInfo memory webAuthn = Utils.getWebAuthnStruct(challenge);
 
         (bytes32 r, bytes32 s) = vm.signP256(passkeyPrivateKey, webAuthn.messageHash);

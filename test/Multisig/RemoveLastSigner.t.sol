@@ -14,8 +14,8 @@ contract MultisigRemoveLastSignerTest is MockMultisigTestBase {
 
     function testRevertIfNotLastSigner() public {
         address signer2Address = address(0x001);
-        bytes[] memory signer2Credentials = new bytes[](1);
-        signer2Credentials[0] = abi.encode(signer2Address);
+        Credential[] memory signer2Credentials = new Credential[](1);
+        signer2Credentials[0] = Credential(abi.encode(signer2Address), CredentialType.EthereumAddress);
         mock.addSigner(signer2Credentials, 1);
 
         vm.expectRevert(abi.encodeWithSelector(Multisig.NotLastSigner.selector, mock.signersCount()));

@@ -236,11 +236,15 @@ contract DueMultisigWallet is ERC1271, IAccount, Multisig, UUPSUpgradeable, Rece
 
     function _isValidWrappedSignature(bytes32 hash, SignatureWrapper memory sigWrapper) internal view returns (bool) {
         Credential memory credential = signerCredentialAtIndex(sigWrapper.signerIndex, sigWrapper.credentialIndex);
+        if (credential.credentialType == CredentialType.Unknown) {
+            revert SignerCredentialNotFound(sigWrapper.signerIndex, sigWrapper.credentialIndex);
+        }
 
         if (credential.credentialType == CredentialType.EthereumAddress) {
+            bytes memory payload = credential.payload;
             address signerAddress;
             assembly ("memory-safe") {
-                signerAddress := mload(add(credential, 32))
+                signerAddress := mload(add(payload, 32))
             }
             return SignatureCheckerLib.isValidSignatureNow(signerAddress, hash, sigWrapper.signatureData);
         }

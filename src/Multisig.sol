@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import {Credential} from "./DueSmartWalletLib.sol";
+import {Credential, CredentialType} from "./DueSmartWalletLib.sol";
 
 struct MultisigStorage {
     uint256 signaturesThreshold;
@@ -98,15 +98,25 @@ contract Multisig {
     }
 
     function _validateCredential(Credential memory credential) internal pure {
-        uint256 length = credential.payload.length;
-        if (length != 32 && length != 64) {
-            revert InvalidCredentialLength(credential.payload);
-        }
+        require(credential.credentialType != CredentialType.Unknown, "Invalid credential type");
 
-        if (length == 32) {
+        if (credential.credentialType == CredentialType.EthereumAddress) {
+            if (credential.payload.length != 32) {
+                revert InvalidCredentialLength(credential.payload);
+            }
+
             bytes32 addr = bytes32(credential.payload);
             if (uint256(addr) > type(uint160).max) {
                 revert InvalidEthereumAddress(credential.payload);
+            }
+        }
+
+        if (
+            credential.credentialType == CredentialType.WebAuthn
+                || credential.credentialType == CredentialType.WebAuthnUV
+        ) {
+            if (credential.payload.length != 64) {
+                revert InvalidCredentialLength(credential.payload);
             }
         }
     }

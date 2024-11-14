@@ -8,8 +8,8 @@ import "./MultisigTestBase.t.sol";
 contract MultisigRemoveSignerTest is MockMultisigTestBase {
     function testRemoveSignerOk() public {
         address signer2Address = address(0x001);
-        bytes[] memory signer2Credentials = new bytes[](1);
-        signer2Credentials[0] = abi.encode(signer2Address);
+        Credential[] memory signer2Credentials = new Credential[](1);
+        signer2Credentials[0] = Credential(abi.encode(signer2Address), CredentialType.EthereumAddress);
 
         mock.addSigner(signer2Credentials, 2);
         assertEq(2, mock.signersCount());
@@ -18,7 +18,7 @@ contract MultisigRemoveSignerTest is MockMultisigTestBase {
         mock.removeSigner(1, 1);
         assertEq(1, mock.signersCount());
         assertEq(1, mock.threshold());
-        assertEq("", mock.signerCredentialAtIndex(1, 0));
+        assertEq("", mock.signerCredentialAtIndex(1, 0).payload);
 
         // check that we can add a new signer with the same credentials afetr removing the old one
         mock.addSigner(signer2Credentials, 2);
